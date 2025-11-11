@@ -53,32 +53,31 @@ La aplicación fue desarrollada en Python usando Streamlit como framework de int
 
 ## 🛠️ METODOLOGÍA
 
-### 1. Arquitectura del Sistema
+### 1. Fundamentos Teóricos
 
-El proyecto está estructurado en cuatro módulos principales:
+El procesamiento digital de imágenes se basa en dos pilares fundamentales:
 
-```
-app_streamlit_completa.py (1,580 líneas)
-├── Configuración global y constantes
-├── Módulo de filtros (PARTE 1 - 30%)
-│   ├── apply_filter(): Aplica filtros con parámetros
-│   └── 8 filtros implementados
-├── Módulo de descriptores (PARTE 2 - 70%)
-│   ├── extract_hog_features(): Extracción HOG
-│   └── extract_lbp_features(): Extracción LBP
-├── Módulo de modelos
-│   ├── PlateCNN: Arquitectura CNN (PyTorch)
-│   ├── train_cnn_model(): Entrenamiento CNN
-│   ├── train_svm_hog(): Entrenamiento SVM+HOG
-│   └── train_svm_lbp(): Entrenamiento SVM+LBP
-└── Interfaz de usuario (Streamlit)
-    ├── Modo Teoría de Filtros
-    ├── Modo Filtros Parte 1
-    ├── Modo Descriptores y Clasificación Parte 2
-    └── Modo Clasificar Imagen
-```
+**1.1 Procesamiento en el Dominio Espacial**  
+Operaciones que se aplican directamente sobre los píxeles de la imagen. Los filtros espaciales modifican los valores de intensidad mediante operaciones matemáticas sobre vecindades locales.
 
-### 2. Dataset
+**1.2 Análisis y Extracción de Características**  
+Transformación de la información visual en representaciones numéricas que capturan propiedades relevantes de la imagen (forma, textura, bordes).
+
+### 2. Enfoque Experimental
+
+El proyecto aborda dos problemas fundamentales del procesamiento de imágenes:
+
+**PARTE 1 - Filtrado Espacial (30%)**
+- Implementación de 8 filtros clásicos
+- Análisis comparativo de efectos
+- Estudio de parámetros óptimos
+
+**PARTE 2 - Clasificación de Patrones (70%)**
+- Extracción de descriptores de características
+- Entrenamiento de modelos supervisados
+- Evaluación cuantitativa del desempeño
+
+### 3. Dataset
 
 **Estructura:**
 - **Total:** 1,080 imágenes
@@ -187,40 +186,43 @@ Se implementaron 8 filtros digitales en el dominio espacial:
 - **Ventaja:** Mejor relación señal-ruido, bordes continuos
 - **Desventaja:** Requiere ajuste cuidadoso de umbrales
 
-### 1.2 Implementación Técnica
+### 1.2 Fundamento Matemático de Filtros
 
-```python
-def apply_filter(image_np, filter_type, **kwargs):
-    """
-    Aplica filtro seleccionado con parámetros configurables
-    
-    Args:
-        image_np: Imagen en escala de grises (numpy array)
-        filter_type: Tipo de filtro ('Media', 'Mediana', etc.)
-        **kwargs: Parámetros específicos del filtro
-    
-    Returns:
-        Imagen filtrada (numpy array)
-    """
-    if filter_type == "Media":
-        ksize = kwargs.get('kernel_size', 5)
-        return cv2.blur(image_np, (ksize, ksize))
-    
-    elif filter_type == "Mediana":
-        ksize = kwargs.get('kernel_size', 5)
-        return cv2.medianBlur(image_np, ksize)
-    
-    # ... [7 filtros más]
+Los filtros espaciales se pueden clasificar en dos categorías principales:
+
+**Filtros de Suavizado (Pasa-Bajas)**
+- Reducen variaciones abruptas de intensidad
+- Aplicaciones: reducción de ruido, preprocesamiento
+- Trade-off: pérdida de detalles vs. reducción de ruido
+
+**Filtros de Realce (Pasa-Altas)**
+- Enfatizan transiciones rápidas de intensidad
+- Aplicaciones: detección de bordes, sharpening
+- Trade-off: sensibilidad al ruido vs. detección de detalles
+
+**Operación de Convolución**  
+Base matemática de los filtros lineales:
+
+```
+g(x,y) = Σ Σ f(x+i, y+j) × h(i,j)
 ```
 
-### 1.3 Interfaz de Usuario - Filtros
+Donde:
+- `f(x,y)`: imagen original
+- `h(i,j)`: kernel del filtro
+- `g(x,y)`: imagen resultante
 
-**Características de la interfaz:**
-- Diseño de dos columnas (imagen original | imagen filtrada)
-- Selectores de filtro con menú desplegable
-- Sliders para ajuste de parámetros en tiempo real
-- Visualización simultánea de resultados
-- Información del filtro y parámetros aplicados
+### 1.3 Análisis Comparativo de Filtros
+
+**Selección según tipo de ruido:**
+- **Ruido gaussiano** → Filtro de Media o Gaussiano
+- **Ruido sal y pimienta** → Filtro de Mediana
+- **Ruido en imágenes HDR** → Filtro Logarítmico
+
+**Selección según aplicación:**
+- **Preprocesamiento general** → Gaussiano
+- **Detección de bordes** → Sobel, Canny
+- **Realce de detalles** → Laplaciano
 
 ---
 
@@ -230,31 +232,35 @@ def apply_filter(image_np, filter_type, **kwargs):
 
 #### 🔸 HOG (Histogram of Oriented Gradients)
 
-**Concepto:**  
-Descriptor que captura la distribución de gradientes de intensidad en regiones locales de la imagen.
+**Fundamento Teórico:**  
+El descriptor HOG se basa en el principio de que la forma y apariencia de objetos locales pueden ser caracterizadas por la distribución de gradientes de intensidad o direcciones de bordes, incluso sin conocimiento preciso de las ubicaciones de los bordes.
 
-**Parámetros de extracción:**
-```python
-hog_params = {
-    'orientations': 9,           # Bins de orientación
-    'pixels_per_cell': (8, 8),   # Tamaño de celda
-    'cells_per_block': (2, 2),   # Celdas por bloque
-    'block_norm': 'L2-Hys',      # Normalización L2-Hys
-    'transform_sqrt': True,       # Raíz cuadrada de valores
-    'feature_vector': True        # Vector 1D de salida
-}
-```
+**Base Matemática:**
 
-**Proceso:**
-1. Conversión a escala de grises
-2. Cálculo de gradientes (Sobel)
-3. División en celdas de 8×8 píxeles
-4. Cálculo de histograma de 9 bins por celda
-5. Agrupación en bloques de 2×2 celdas
-6. Normalización L2-Hys por bloque
-7. Concatenación en vector de características
+1. **Cálculo del Gradiente:**
+   ```
+   Gx = I(x+1,y) - I(x-1,y)
+   Gy = I(x,y+1) - I(x,y-1)
+   Magnitud: G = √(Gx² + Gy²)
+   Orientación: θ = arctan(Gy/Gx)
+   ```
 
-**Dimensión del vector:** ~3,780 características (128×64 imagen)
+2. **Histograma de Orientaciones:**
+   - División del espacio angular (0°-180°) en 9 bins
+   - Cada gradiente vota en bins según su orientación
+   - Peso del voto proporcional a la magnitud
+
+3. **Normalización por Bloques:**
+   - Agrupa celdas en bloques de 2×2
+   - Normalización L2-Hys para robustez a iluminación
+   ```
+   v_norm = v / √(||v||² + ε²)
+   ```
+
+**Propiedades Fundamentales:**
+- **Invariancia a iluminación:** Normalización por bloques
+- **Invariancia a traslación:** Uso de gradientes locales
+- **Sensibilidad a forma:** Captura estructura geométrica
 
 **Ventajas:**
 - Robusto a cambios de iluminación
@@ -267,29 +273,34 @@ hog_params = {
 
 #### 🔸 LBP (Local Binary Patterns)
 
-**Concepto:**  
-Descriptor de textura que codifica la relación entre píxel central y vecinos.
+**Fundamento Teórico:**  
+LBP es un operador de textura que caracteriza la estructura espacial de texturas locales mediante comparaciones binarias entre un píxel central y su vecindad circular.
 
-**Parámetros de extracción:**
-```python
-lbp_params = {
-    'radius': 3,        # Radio de vecindad
-    'n_points': 24,     # Puntos de muestreo (8 × radius)
-    'method': 'uniform' # Patrones uniformes
-}
-```
+**Base Matemática:**
 
-**Proceso:**
-1. Conversión a escala de grises
-2. Para cada píxel (x,y):
-   - Muestrear 24 vecinos en radio 3
-   - Comparar con valor central
-   - Generar código binario
-   - Convertir a valor decimal
-3. Calcular histograma de patrones
-4. Normalizar histograma
+1. **Codificación Binaria:**
+   ```
+   LBP(xc,yc) = Σ(i=0 to P-1) s(gi - gc) × 2^i
+   
+   donde:
+   s(x) = 1 si x ≥ 0
+   s(x) = 0 si x < 0
+   ```
 
-**Dimensión del vector:** 26 características (patrones uniformes)
+2. **Muestreo Circular:**
+   - P puntos en círculo de radio R
+   - Coordenadas: `(xc + R×cos(2πi/P), yc + R×sin(2πi/P))`
+   - Interpolación bilineal para posiciones no enteras
+
+3. **Patrones Uniformes:**
+   - Patrón uniforme: máximo 2 transiciones 0→1 o 1→0
+   - Reduce dimensionalidad: 256 patrones → 59 uniformes
+   - Captura ~90% de texturas naturales
+
+**Propiedades Fundamentales:**
+- **Invariancia monotónica:** Robusto a cambios de iluminación
+- **Invariancia rotacional:** Versión extendida (LBP^riu2)
+- **Eficiencia computacional:** Operaciones binarias simples
 
 **Ventajas:**
 - Invariante a cambios monótonos de iluminación
@@ -306,127 +317,136 @@ Se implementaron 3 modelos diferentes para comparación:
 
 #### 🤖 Modelo 1: SVM + HOG
 
-**Arquitectura:**
-```python
-Pipeline(
-    StandardScaler(),              # Normalización Z-score
-    LinearSVC(                     # SVM lineal
-        max_iter=5000,
-        dual=True,
-        random_state=42,
-        class_weight='balanced'
-    )
-)
+**Fundamento Teórico:**  
+Las Máquinas de Vectores de Soporte (SVM) son clasificadores que buscan el hiperplano óptimo que maximiza el margen entre clases en un espacio de alta dimensionalidad.
+
+**Formulación Matemática:**
+
+**Problema de optimización:**
+```
+minimizar: ½||w||² + C Σ ξi
+sujeto a: yi(w·xi + b) ≥ 1 - ξi
 ```
 
-**Características:**
-- Input: Vector HOG de ~3,780 dimensiones
-- Escalado: Media 0, desviación estándar 1
-- Clasificador: SVM con kernel lineal
-- Clases balanceadas: Pesos inversamente proporcionales
+Donde:
+- `w`: vector normal al hiperplano
+- `b`: término de sesgo
+- `C`: parámetro de regularización
+- `ξi`: variables de holgura (slack)
 
-**Entrenamiento:**
-- Tiempo estimado: 2-5 minutos
-- Memoria requerida: ~500 MB
-- Convergencia: 5,000 iteraciones máximas
+**Función de decisión:**
+```
+f(x) = sign(w·x + b)
+```
+
+**Características del enfoque SVM+HOG:**
+- **Espacio de características:** ~3,780 dimensiones (HOG)
+- **Kernel lineal:** Eficiente en alta dimensionalidad
+- **Normalización:** Z-score para escala uniforme
+- **Pesos balanceados:** Compensa desbalance de clases
 
 #### 🤖 Modelo 2: SVM + LBP
 
-**Arquitectura:**
-```python
-Pipeline(
-    StandardScaler(),              # Normalización Z-score
-    LinearSVC(                     # SVM lineal
-        max_iter=5000,
-        dual=True,
-        random_state=42,
-        class_weight='balanced'
-    )
-)
-```
+**Fundamento Teórico:**  
+Este modelo combina la capacidad de LBP para capturar micro-texturas con la robustez del clasificador SVM.
 
-**Características:**
-- Input: Vector LBP de 26 dimensiones
-- Escalado: Media 0, desviación estándar 1
-- Clasificador: SVM con kernel lineal
-- Clases balanceadas: Pesos inversamente proporcionales
+**Diferencias con SVM+HOG:**
 
-**Entrenamiento:**
-- Tiempo estimado: <1 minuto
-- Memoria requerida: ~100 MB
-- Convergencia: Rápida (pocas dimensiones)
+**Espacio de características:**
+- **Dimensionalidad:** 26 vs. 3,780 (HOG)
+- **Tipo de información:** Textura vs. Forma
+- **Complejidad:** Baja vs. Alta
+
+**Ventajas del espacio reducido:**
+- Convergencia más rápida
+- Menor riesgo de overfitting
+- Eficiencia computacional
+
+**Trade-offs:**
+- ⬆️ Velocidad de entrenamiento
+- ⬇️ Capacidad de representación
+- ⬇️ Precisión en patrones complejos
 
 #### 🤖 Modelo 3: CNN (Convolutional Neural Network)
 
-**Arquitectura detallada:**
+**Fundamento Teórico:**  
+Las Redes Neuronales Convolucionales aprenden jerarquías de características directamente de los datos, desde bordes simples hasta patrones complejos.
 
-```python
-PlateCNN(
-    # Bloque convolucional 1
-    Conv2d(3 → 32, kernel=3×3, padding=1)
-    BatchNorm2d(32)
-    ReLU()
-    MaxPool2d(2×2)                  # 128×64 → 64×32
-    
-    # Bloque convolucional 2
-    Conv2d(32 → 64, kernel=3×3, padding=1)
-    BatchNorm2d(64)
-    ReLU()
-    MaxPool2d(2×2)                  # 64×32 → 32×16
-    
-    # Bloque convolucional 3
-    Conv2d(64 → 128, kernel=3×3, padding=1)
-    BatchNorm2d(128)
-    ReLU()
-    MaxPool2d(2×2)                  # 32×16 → 16×8
-    
-    # Bloque convolucional 4
-    Conv2d(128 → 256, kernel=3×3, padding=1)
-    BatchNorm2d(256)
-    ReLU()
-    AdaptiveAvgPool2d(1×1)          # 16×8 → 1×1
-    
-    # Clasificador fully-connected
-    Flatten()
-    Dropout(0.4)
-    Linear(256 → 128)
-    ReLU()
-    Dropout(0.3)
-    Linear(128 → 36)                # 36 clases
-)
+**Principios Fundamentales:**
+
+**1. Operación de Convolución:**
+```
+S(i,j) = (I * K)(i,j) = Σ Σ I(m,n)K(i-m, j-n)
+                        m  n
 ```
 
-**Parámetros totales:** ~75,000
+**2. Campos Receptivos:**
+- Cada neurona "ve" una región local de la entrada
+- Campos receptivos crecen con la profundidad
+- Captura patrones de complejidad creciente
 
-**Características:**
-- Input: Imágenes RGB 128×64×3
-- 4 bloques convolucionales con BatchNorm
-- Global Average Pooling adaptativo
-- 2 capas fully-connected
-- Dropout para regularización (40% y 30%)
+**3. Arquitectura Jerárquica:**
 
-**Hiperparámetros de entrenamiento:**
-```python
-optimizer = Adam(
-    lr=0.001,              # Learning rate
-    weight_decay=1e-4      # Regularización L2
-)
-loss = CrossEntropyLoss() # Pérdida multi-clase
-batch_size = 32
-epochs = 20
+**Nivel 1 (Baja complejidad):**
+- Detectores de bordes (horizontal, vertical, diagonal)
+- Filtros Gabor aprendidos
+- Patrones locales simples
+
+**Nivel 2 (Media complejidad):**
+- Combinaciones de bordes
+- Formas básicas (curvas, esquinas)
+- Texturas simples
+
+**Nivel 3 (Alta complejidad):**
+- Partes de objetos
+- Patrones recurrentes
+- Características discriminativas
+
+**Nivel 4 (Muy alta complejidad):**
+- Representaciones globales
+- Características de clase
+- Patrones abstractos
+
+**4. Componentes Clave:**
+
+**Convolución:**
+- Extracción de características locales
+- Compartir pesos reduce parámetros
+- Invariancia a traslación
+
+**Pooling:**
+- Reducción de dimensionalidad espacial
+- Invariancia a pequeñas deformaciones
+- Reduce overfitting
+
+**Batch Normalization:**
+- Estabiliza el entrenamiento
+- Permite learning rates mayores
+- Regularización implícita
+
+**Dropout:**
+- Regularización explícita
+- Previene co-adaptación de neuronas
+- Simula ensemble de redes
+
+**5. Función de Pérdida:**
+
+**Cross-Entropy multi-clase:**
+```
+L = -Σ yi × log(ŷi)
+     i
+
+donde:
+yi: etiqueta verdadera (one-hot)
+ŷi: probabilidad predicha (softmax)
 ```
 
-**Proceso de entrenamiento:**
-1. Carga de datos con DataLoader
-2. Augmentación: normalización RGB
-3. Forward pass en batches
-4. Cálculo de pérdida (Cross-Entropy)
-5. Backpropagation con Adam
-6. Validación cada epoch
-7. Early stopping si no mejora
+**6. Optimización:**
 
-**Tiempo estimado:** 10-15 minutos (CPU)  
-**Memoria requerida:** ~2 GB
+**Adam Optimizer:**
+- Combina momentum + RMSprop
+- Tasas de aprendizaje adaptativas
+- Convergencia rápida y estable
 
 ### 2.3 Métricas de Evaluación
 
@@ -464,77 +484,50 @@ Para cada modelo se calculan las siguientes métricas:
 
 ---
 
-## 💻 IMPLEMENTACIÓN TÉCNICA
+## 💻 MARCO TEÓRICO DEL PROCESAMIENTO
 
-### 3.1 Stack Tecnológico
+### 3.1 Teoría de Señales e Imágenes
 
-**Lenguajes y Frameworks:**
-- Python 3.12
-- Streamlit 1.39.0 (interfaz web)
-- OpenCV 4.10.0 (procesamiento de imágenes)
-- scikit-learn 1.5.2 (SVM, métricas)
-- PyTorch 2.4.1 (redes neuronales)
-- NumPy 1.26.4 (operaciones numéricas)
-- Pandas 2.2.3 (manejo de datos)
-- Matplotlib 3.9.2 (visualización)
+**Representación Digital:**
+Una imagen digital es una función bidimensional `f(x,y)` donde:
+- `x, y`: coordenadas espaciales discretas
+- `f`: intensidad o nivel de gris en ese punto
 
-**Infraestructura:**
-- Git/GitHub (control de versiones)
-- Streamlit Cloud (deployment)
-- Python venv (gestión de dependencias)
+**Teorema de Muestreo (Nyquist-Shannon):**
+```
+fs ≥ 2 × fmax
+```
+La frecuencia de muestreo debe ser al menos el doble de la frecuencia máxima para evitar aliasing.
 
-### 3.2 Estructura del Código
+### 3.2 Espacios de Color
 
-**Organización modular:**
-```python
-# 1. Configuración y constantes (líneas 1-70)
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-MODEL_DIR = Path('models')
+**RGB (Red, Green, Blue):**
+- Modelo aditivo basado en percepción humana
+- Cada píxel: (R, G, B) ∈ [0, 255]³
 
-# 2. Arquitectura CNN (líneas 71-117)
-class PlateCNN(nn.Module):
-    # ... definición de capas
+**Escala de Grises:**
+```
+Gray = 0.299×R + 0.587×G + 0.114×B
+```
+Ponderación basada en sensibilidad del ojo humano.
 
-# 3. Funciones de filtros (líneas 118-166)
-def apply_filter(image_np, filter_type, **kwargs):
-    # ... implementación de 8 filtros
+### 3.3 Transformaciones Fundamentales
 
-# 4. Extracción de descriptores (líneas 167-244)
-def extract_hog_features(image_gray, hog_params):
-def extract_lbp_features(image_gray, radius, n_points):
-
-# 5. Entrenamiento de modelos (líneas 245-380)
-def train_cnn_model(data_root, epochs, lr, batch_size, weight_decay):
-def train_svm_hog(data_root, hog_params):
-def train_svm_lbp(data_root, radius, n_points):
-
-# 6. Teoría de filtros (líneas 381-1127)
-# 9 tabs con explicaciones matemáticas completas
-
-# 7. Interfaz principal (líneas 1128-1580)
-def main():
-    # Modo Teoría, Filtros, Entrenamiento, Clasificación
+**1. Transformaciones Puntuales:**
+Operan píxel por píxel independientemente:
+```
+g(x,y) = T[f(x,y)]
 ```
 
-### 3.3 Optimizaciones Implementadas
+**2. Transformaciones Locales:**
+Usan vecindades (convolución):
+```
+g(x,y) = Σ Σ f(x+i,y+j) × h(i,j)
+         i j
+```
 
-#### ⚡ Rendimiento
-- Progress bars con ETA cada 10 imágenes durante entrenamiento
-- Carga lazy de modelos (solo cuando se necesitan)
-- Cache de descriptores para evitar recálculo
-- Batch processing en CNN para eficiencia
-
-#### 🔒 Robustez
-- Validación de existencia de archivos
-- Manejo de excepciones en carga de modelos
-- Verificación de dimensiones de entrada
-- Normalización automática de imágenes
-
-#### 🎨 Interfaz de Usuario
-- Diseño responsive con columnas
-- Feedback visual con spinners y progress bars
-- Mensajes informativos con st.info/success/warning
-- Visualización de resultados en tablas y gráficos
+**3. Transformaciones Globales:**
+Consideran toda la imagen (FFT, histograma)
 
 ---
 
@@ -635,21 +628,47 @@ tqdm==4.66.5
    - Código reproducible y versionado en Git
    - Aplicación funcional accesible públicamente
 
-### 5.2 Comparación de Enfoques
+### 5.2 Análisis Teórico Comparativo
 
-**Métodos Tradicionales (SVM + Descriptores):**
-- Requieren ingeniería de características manual
-- Mayor interpretabilidad
-- Funcionan bien con datasets pequeños
-- Entrenamiento rápido
-- Buen desempeño en problemas bien definidos
+**Paradigmas de Aprendizaje:**
 
-**Deep Learning (CNN):**
-- Aprendizaje automático de características
-- Mayor capacidad de generalización
-- Requieren más datos y cómputo
-- Mejor desempeño en problemas complejos
-- Menos interpretables pero más flexibles
+**Enfoque Tradicional (Descriptores Manuales + SVM):**
+
+**Ventajas teóricas:**
+- **Base matemática sólida:** HOG y LBP tienen interpretación geométrica clara
+- **Garantías teóricas:** SVM maximiza margen con fundamento estadístico
+- **Eficiencia en datos:** Funciona con datasets limitados (teoría VC)
+- **Interpretabilidad:** Vectores de soporte son ejemplares representativos
+
+**Limitaciones teóricas:**
+- **Sesgo inductivo fijo:** Características diseñadas a priori
+- **Pérdida de información:** Compresión manual puede descartar patrones relevantes
+- **Escalabilidad:** Complejidad O(n²) en SVM estándar
+
+**Enfoque Moderno (Deep Learning - CNN):**
+
+**Ventajas teóricas:**
+- **Teorema de aproximación universal:** Puede aproximar cualquier función continua
+- **Aprendizaje jerárquico:** Descubre representaciones óptimas automáticamente
+- **Invariancia aprendida:** Adquiere invariancias relevantes del problema
+- **Composicionalidad:** Combina características simples en complejas
+
+**Limitaciones teóricas:**
+- **Caja negra:** Difícil interpretación de características aprendidas
+- **Mínimos locales:** Optimización no convexa
+- **Requisitos de datos:** Necesita ejemplos suficientes para generalizar
+- **Overfitting:** Alto riesgo con modelos sobreparametrizados
+
+**Teoría del Aprendizaje Estadístico:**
+
+Ambos enfoques buscan minimizar el riesgo esperado:
+```
+R(f) = E[L(Y, f(X))]
+```
+
+Pero difieren en cómo:
+- **SVM:** Minimiza riesgo estructural (margen + error)
+- **CNN:** Minimiza riesgo empírico con regularización
 
 ### 5.3 Limitaciones y Trabajo Futuro
 
