@@ -436,7 +436,7 @@ def main():
             }
             
             df_comparison = pd.DataFrame(comparison_data)
-            st.dataframe(df_comparison, hide_index=True, width='stretch')
+            st.dataframe(df_comparison, hide_index=True, use_container_width=True)
             
             st.info("👉 **Selecciona una pestaña arriba** para ver la teoría detallada de cada filtro.")
         
@@ -1133,7 +1133,7 @@ def main():
                 image_np = np.array(image_pil)
                 image_gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
                 
-                st.image(image_pil, caption='Imagen Original', width='stretch')
+                st.image(image_pil, caption='Imagen Original', use_column_width=True)
         
         with col2:
             if uploaded_file is not None:
@@ -1180,7 +1180,7 @@ def main():
                             filtered_image = apply_filter(image_gray, filter_type, **params)
                             
                             st.image(filtered_image, caption=f'Filtro: {filter_type}',  # type: ignore
-                                    width='stretch', clamp=True)
+                                    use_column_width=True, clamp=True)
                             
                             # Información del filtro
                             st.info(f"""
@@ -1465,7 +1465,7 @@ def main():
             col1, col2 = st.columns([1, 1])
             
             with col1:
-                st.image(image_pil, caption='Imagen cargada', width='stretch')
+                st.image(image_pil, caption='Imagen cargada', use_column_width=True)
             
             with col2:
                 # Seleccionar modelo
@@ -1564,7 +1564,7 @@ def main():
                             }
                             
                             df_probs = pd.DataFrame(prob_data)
-                            st.dataframe(df_probs, hide_index=True, width='stretch')
+                            st.dataframe(df_probs, hide_index=True, use_container_width=True)
                             
                             # Gráfico de barras
                             fig, ax = plt.subplots(figsize=(10, 4))
