@@ -1,21 +1,21 @@
 # Procesamiento de imágenes
-opencv-python-headless==4.8.1.78
+opencv-python-headless==4.10.0.84
 numpy==1.26.4
-matplotlib==3.8.4
-scikit-image==0.22.0
-Pillow==10.3.0
+matplotlib==3.9.2
+scikit-image==0.24.0
+Pillow==10.4.0
 
 # Machine Learning
-scikit-learn==1.4.2
-torch==2.2.2
-torchvision==0.17.2
+scikit-learn==1.5.2
+torch==2.4.1
+torchvision==0.19.1
 
 # Análisis y visualización
-pandas==2.2.2
+pandas==2.2.3
 seaborn==0.13.2
 
 # Interfaz gráfica
-streamlit==1.33.0
+streamlit==1.39.0
 
 # Utilidades
-tqdm==4.66.4
+tqdm==4.66.5
